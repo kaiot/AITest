@@ -1,0 +1,30 @@
+# Environment
+.env
+
+# SSL certs (regenerate locally, never commit)
+cert.pem
+key.pem
+
+# Data / database
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Temp files created by JARVIS
+.jarvis_prompt.md
+.jarvis_output.txt
+.jarvis_run.bat
+.jarvis_start.bat
+
+# Logs
+*.log
