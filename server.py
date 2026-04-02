@@ -1309,11 +1309,11 @@ return windowList
             # Weather — refresh every loop (30s is fine, API is fast)
             try:
                 import urllib.request, json as _json
-                url = "https://api.open-meteo.com/v1/forecast?latitude=27.77&longitude=-82.64&current=temperature_2m,weathercode&temperature_unit=fahrenheit"
+                url = "https://api.open-meteo.com/v1/forecast?latitude=45.4215&longitude=-75.6972&current=temperature_2m,weathercode&temperature_unit=celsius"
                 with urllib.request.urlopen(url, timeout=3) as resp:
                     d = _json.loads(resp.read()).get("current", {})
                     temp = d.get("temperature_2m", "?")
-                    _ctx_cache["weather"] = f"Current weather in St. Petersburg, FL: {temp}°F"
+                    _ctx_cache["weather"] = f"Current weather in Ottawa, Ontario: {temp}°C"
             except Exception:
                 pass
 
