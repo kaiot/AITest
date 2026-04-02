@@ -2312,6 +2312,7 @@ async def voice_handler(ws: WebSocket):
                 tts = strip_markdown_for_tts(response_text)
                 await ws.send_json({"type": "status", "state": "speaking"})
                 audio = await synthesize_speech(tts)
+                log.info(f"TTS result: {len(audio)} bytes" if audio else "TTS result: None")
                 if audio:
                     await ws.send_json({"type": "audio", "data": base64.b64encode(audio).decode(), "text": response_text})
                 else:
