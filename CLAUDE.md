@@ -74,7 +74,8 @@ These replace the macOS originals:
 ```
 ANTHROPIC_API_KEY   Required
 EDGE_TTS_VOICE      Optional (defaults to en-GB-RyanNeural)
-USER_NAME           Optional (how JARVIS addresses you, default "sir")
+HONORIFIC           Optional (how JARVIS addresses you, defaults to ma'am — options: sir, ma'am, none)
+USER_NAME           Optional (your name, used in prompts and context)
 CALENDAR_ACCOUNTS   Optional (filter Outlook accounts)
 ```
 
