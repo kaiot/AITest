@@ -20,8 +20,7 @@ interface StatusResponse {
   uptime_seconds: number;
   env_keys_set: {
     anthropic: boolean;
-    fish_audio: boolean;
-    fish_voice_id: boolean;
+    kokoro_voice: string;
     user_name: string;
   };
 }
@@ -39,7 +38,7 @@ interface PreferencesResponse {
 let panelEl: HTMLElement | null = null;
 let isOpen = false;
 let isFirstTimeSetup = false;
-let setupStep = 0; // 0=anthropic, 1=fish, 2=name, 3=done
+let setupStep = 0; // 0=anthropic, 1=name, 2=done
 
 // ---------------------------------------------------------------------------
 // API helpers
@@ -92,19 +91,38 @@ function buildPanelHTML(): string {
           </div>
 
           <div class="settings-field">
-            <label>Fish Audio API Key</label>
+            <label>Kokoro Voice</label>
             <div class="settings-input-row">
-              <input type="password" id="input-fish-key" placeholder="Fish Audio key..." />
-              <button class="settings-btn" id="btn-test-fish">Test</button>
-              <span class="status-dot" id="status-fish"></span>
-            </div>
-          </div>
-
-          <div class="settings-field">
-            <label>Fish Voice ID</label>
-            <div class="settings-input-row">
-              <input type="text" id="input-fish-voice-id" placeholder="612b878b113047d9a770c069c8b4fdfe" />
-              <button class="settings-btn" id="btn-save-voice-id">Save</button>
+              <select id="input-kokoro-voice">
+                <optgroup label="American English (Male)">
+                  <option value="am_fenrir">am_fenrir (fenrir)</option>
+                  <option value="am_michael">am_michael (michael)</option>
+                  <option value="am_puck">am_puck (puck)</option>
+                  <option value="am_echo">am_echo (echo)</option>
+                  <option value="am_eric">am_eric (eric)</option>
+                  <option value="am_liam">am_liam (liam)</option>
+                  <option value="am_onyx">am_onyx (onyx)</option>
+                </optgroup>
+                <optgroup label="British English (Male)">
+                  <option value="bm_george">bm_george (george)</option>
+                  <option value="bm_fable">bm_fable (fable)</option>
+                  <option value="bm_daniel">bm_daniel (daniel)</option>
+                  <option value="bm_lewis">bm_lewis (lewis)</option>
+                </optgroup>
+                <optgroup label="American English (Female)">
+                  <option value="af_heart">af_heart (heart)</option>
+                  <option value="af_bella">af_bella (bella)</option>
+                  <option value="af_nicole">af_nicole (nicole)</option>
+                  <option value="af_sarah">af_sarah (sarah)</option>
+                </optgroup>
+                <optgroup label="British English (Female)">
+                  <option value="bf_emma">bf_emma (emma)</option>
+                  <option value="bf_isabella">bf_isabella (isabella)</option>
+                </optgroup>
+              </select>
+              <button class="settings-btn" id="btn-save-kokoro-voice">Save</button>
+              <button class="settings-btn" id="btn-test-kokoro">Test</button>
+              <span class="status-dot" id="status-kokoro"></span>
             </div>
           </div>
 
@@ -216,7 +234,12 @@ async function loadStatus() {
 
     // API key status dots
     setDotStatus("status-anthropic", status.env_keys_set.anthropic ? "green" : "red");
-    setDotStatus("status-fish", status.env_keys_set.fish_audio ? "green" : "red");
+
+    // Kokoro voice selector — pre-select current voice
+    const voiceEl = document.getElementById("input-kokoro-voice") as HTMLSelectElement;
+    if (voiceEl && status.env_keys_set.kokoro_voice) {
+      voiceEl.value = status.env_keys_set.kokoro_voice;
+    }
 
     // System info
     const memEl = document.getElementById("sysinfo-memory");
@@ -258,22 +281,17 @@ function wireEvents() {
   // Save keys
   document.getElementById("btn-save-keys")?.addEventListener("click", async () => {
     const anthropicKey = (document.getElementById("input-anthropic-key") as HTMLInputElement).value.trim();
-    const fishKey = (document.getElementById("input-fish-key") as HTMLInputElement).value.trim();
-
     if (anthropicKey) {
       await apiPost("/api/settings/keys", { key_name: "ANTHROPIC_API_KEY", key_value: anthropicKey });
-    }
-    if (fishKey) {
-      await apiPost("/api/settings/keys", { key_name: "FISH_API_KEY", key_value: fishKey });
     }
     await loadStatus();
   });
 
-  // Save voice ID
-  document.getElementById("btn-save-voice-id")?.addEventListener("click", async () => {
-    const voiceId = (document.getElementById("input-fish-voice-id") as HTMLInputElement).value.trim();
-    if (voiceId) {
-      await apiPost("/api/settings/keys", { key_name: "FISH_VOICE_ID", key_value: voiceId });
+  // Save Kokoro voice
+  document.getElementById("btn-save-kokoro-voice")?.addEventListener("click", async () => {
+    const voice = (document.getElementById("input-kokoro-voice") as HTMLSelectElement).value;
+    if (voice) {
+      await apiPost("/api/settings/keys", { key_name: "KOKORO_VOICE", key_value: voice });
     }
   });
 
@@ -289,15 +307,14 @@ function wireEvents() {
     }
   });
 
-  // Test Fish
-  document.getElementById("btn-test-fish")?.addEventListener("click", async () => {
-    setDotStatus("status-fish", "yellow");
-    const key = (document.getElementById("input-fish-key") as HTMLInputElement).value.trim();
+  // Test Kokoro
+  document.getElementById("btn-test-kokoro")?.addEventListener("click", async () => {
+    setDotStatus("status-kokoro", "yellow");
     try {
-      const result = await apiPost<{ valid: boolean; error?: string }>("/api/settings/test-fish", { key_value: key || undefined });
-      setDotStatus("status-fish", result.valid ? "green" : "red");
+      const result = await apiPost<{ valid: boolean; error?: string }>("/api/settings/test-kokoro", {});
+      setDotStatus("status-kokoro", result.valid ? "green" : "red");
     } catch {
-      setDotStatus("status-fish", "red");
+      setDotStatus("status-kokoro", "red");
     }
   });
 
@@ -346,16 +363,15 @@ function showSetupStep(step: number) {
 
   const nextBtn = document.getElementById("btn-setup-next");
   if (nextBtn) {
-    if (step === 0) nextBtn.textContent = "Next: Test Keys";
-    else if (step === 1) nextBtn.textContent = "Next: Set Your Name";
-    else if (step === 2) nextBtn.textContent = "Finish Setup";
+    if (step === 0) nextBtn.textContent = "Next: Set Your Name";
+    else if (step === 1) nextBtn.textContent = "Finish Setup";
     else nextBtn.style.display = "none";
   }
 }
 
 async function advanceSetup() {
   setupStep++;
-  if (setupStep >= 3) {
+  if (setupStep >= 2) {
     // Done — save everything and close
     isFirstTimeSetup = false;
     const welcome = document.getElementById("settings-welcome");

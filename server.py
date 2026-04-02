@@ -32,8 +32,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+import io
+
 import anthropic
 import httpx
+import numpy as np
+import soundfile as sf
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -61,9 +65,7 @@ log = logging.getLogger("jarvis")
 # ---------------------------------------------------------------------------
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-FISH_API_KEY = os.getenv("FISH_API_KEY", "")
-FISH_VOICE_ID = os.getenv("FISH_VOICE_ID", "612b878b113047d9a770c069c8b4fdfe")  # JARVIS (MCU)
-FISH_API_URL = "https://api.fish.audio/v1/tts"
+KOKORO_VOICE = os.getenv("KOKORO_VOICE", "am_fenrir")  # Best male American English voice
 USER_NAME = os.getenv("USER_NAME", "sir")
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -95,7 +97,7 @@ CONVERSATION STYLE:
 - When you don't know something: "I'm afraid I don't have that information, sir" not "I don't know"
 
 SELF-AWARENESS:
-You ARE the JARVIS project at {project_dir} on {user_name}'s computer. Your code is Python (FastAPI server, WebSocket voice, Fish Audio TTS, Anthropic API). You were built by {user_name}. If asked about yourself, your code, how you work, or your line count — use [ACTION:PROMPT_PROJECT] to check the jarvis project. You have full access to your own source code.
+You ARE the JARVIS project at {project_dir} on {user_name}'s computer. Your code is Python (FastAPI server, WebSocket voice, Kokoro TTS, Anthropic API). You were built by {user_name}. If asked about yourself, your code, how you work, or your line count — use [ACTION:PROMPT_PROJECT] to check the jarvis project. You have full access to your own source code.
 
 YOUR CAPABILITIES (these are REAL and ACTIVE — you CAN do all of these RIGHT NOW):
 - You CAN open Windows Terminal via AppleScript
@@ -138,7 +140,7 @@ If the user asks you to do something you genuinely can't do, say "I'm afraid tha
 YOUR INTERFACE:
 The user interacts with you through a web browser showing a particle orb visualization that reacts to your voice. The interface has these controls:
 - **Three-dot menu** (top right): contains Settings, Restart Server, and Fix Yourself options
-- **Settings panel**: Opens from the menu. Users can enter API keys (Anthropic, Fish Audio), test connections, set their name and preferences, and see system status (calendar, mail, notes connectivity). Keys are saved to the .env file.
+- **Settings panel**: Opens from the menu. Users can enter their Anthropic API key, choose a Kokoro TTS voice, set their name and preferences, and see system status (calendar, mail, notes connectivity). Keys are saved to the .env file.
 - **Mute button**: Toggles your listening on/off. When muted, you can't hear the user. They click it again to unmute.
 - **Restart Server**: Restarts your backend process. Useful if something seems stuck.
 - **Fix Yourself**: Opens Claude Code in your own project directory so you can debug and fix issues in your own code.
@@ -1043,36 +1045,45 @@ _last_greeting_time: float = 0
 
 
 # ---------------------------------------------------------------------------
-# TTS (Fish Audio)
+# TTS (Kokoro — local, no API key required)
 # ---------------------------------------------------------------------------
 
-async def synthesize_speech(text: str) -> Optional[bytes]:
-    """Generate speech audio from text using Fish Audio TTS."""
-    if not FISH_API_KEY:
-        log.warning("FISH_API_KEY not set, skipping TTS")
+_kokoro_pipeline = None
+
+def _get_kokoro_pipeline():
+    global _kokoro_pipeline
+    if _kokoro_pipeline is None:
+        from kokoro import KPipeline
+        _kokoro_pipeline = KPipeline(lang_code='a')  # American English
+    return _kokoro_pipeline
+
+def _synthesize_sync(text: str) -> Optional[bytes]:
+    """Synchronous Kokoro synthesis — run in executor to avoid blocking."""
+    try:
+        pipeline = _get_kokoro_pipeline()
+        chunks = []
+        for _, _, audio in pipeline(text, voice=KOKORO_VOICE):
+            chunks.append(audio)
+        if not chunks:
+            return None
+        full_audio = np.concatenate(chunks) if len(chunks) > 1 else chunks[0]
+        buf = io.BytesIO()
+        sf.write(buf, full_audio, 24000, format='WAV')
+        buf.seek(0)
+        return buf.read()
+    except Exception as e:
+        log.error(f"TTS error: {e}")
         return None
 
+async def synthesize_speech(text: str) -> Optional[bytes]:
+    """Generate speech audio from text using Kokoro TTS."""
     try:
-        async with httpx.AsyncClient(timeout=15.0) as http:
-            response = await http.post(
-                FISH_API_URL,
-                headers={
-                    "Authorization": f"Bearer {FISH_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "text": text,
-                    "reference_id": FISH_VOICE_ID,
-                    "format": "mp3",
-                },
-            )
-            if response.status_code == 200:
-                _session_tokens["tts_calls"] += 1
-                _append_usage_entry(0, 0, "tts")
-                return response.content
-            else:
-                log.error(f"TTS error: {response.status_code}")
-                return None
+        loop = asyncio.get_event_loop()
+        audio = await loop.run_in_executor(None, _synthesize_sync, text)
+        if audio:
+            _session_tokens["tts_calls"] += 1
+            _append_usage_entry(0, 0, "tts")
+        return audio
     except Exception as e:
         log.error(f"TTS error: {e}")
         return None
@@ -2413,7 +2424,7 @@ class PreferencesUpdate(BaseModel):
 
 @app.post("/api/settings/keys")
 async def api_settings_keys(body: KeyUpdate):
-    allowed = {"ANTHROPIC_API_KEY", "FISH_API_KEY", "FISH_VOICE_ID", "USER_NAME", "HONORIFIC", "CALENDAR_ACCOUNTS"}
+    allowed = {"ANTHROPIC_API_KEY", "KOKORO_VOICE", "USER_NAME", "HONORIFIC", "CALENDAR_ACCOUNTS"}
     if body.key_name not in allowed:
         return JSONResponse({"success": False, "error": "Invalid key name"}, status_code=400)
     _write_env_key(body.key_name, body.key_value)
@@ -2431,24 +2442,13 @@ async def api_test_anthropic(body: KeyTest):
     except Exception as e:
         return {"valid": False, "error": str(e)[:200]}
 
-@app.post("/api/settings/test-fish")
-async def api_test_fish(body: KeyTest):
-    key = body.key_value or os.getenv("FISH_API_KEY", "")
-    if not key:
-        return {"valid": False, "error": "No key provided"}
+@app.post("/api/settings/test-kokoro")
+async def api_test_kokoro():
+    """Test Kokoro TTS by generating a short clip."""
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(
-                "https://api.fish.audio/v1/tts",
-                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-                json={"text": "test", "reference_id": FISH_VOICE_ID},
-            )
-            if resp.status_code in (200, 201):
-                return {"valid": True}
-            elif resp.status_code == 401:
-                return {"valid": False, "error": "Invalid API key"}
-            else:
-                return {"valid": False, "error": f"HTTP {resp.status_code}"}
+        loop = asyncio.get_event_loop()
+        audio = await loop.run_in_executor(None, _synthesize_sync, "Kokoro ready.")
+        return {"valid": audio is not None}
     except Exception as e:
         return {"valid": False, "error": str(e)[:200]}
 
@@ -2480,8 +2480,7 @@ async def api_settings_status():
         "uptime_seconds": int(time.time() - _session_start),
         "env_keys_set": {
             "anthropic": bool(env_dict.get("ANTHROPIC_API_KEY", "").strip() and env_dict.get("ANTHROPIC_API_KEY", "") != "your-anthropic-api-key-here"),
-            "fish_audio": bool(env_dict.get("FISH_API_KEY", "").strip() and env_dict.get("FISH_API_KEY", "") != "your-fish-audio-api-key-here"),
-            "fish_voice_id": bool(env_dict.get("FISH_VOICE_ID", "").strip()),
+            "kokoro_voice": env_dict.get("KOKORO_VOICE", KOKORO_VOICE),
             "user_name": env_dict.get("USER_NAME", ""),
         },
     }

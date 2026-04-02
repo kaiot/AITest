@@ -196,13 +196,20 @@ if not exist "cert.pem" (
 :: ── Create data directory ────────────────────────────────────────────────────
 if not exist "data" mkdir "data"
 
+:: ── Install espeak-ng for Kokoro TTS ─────────────────────────────────────────
+echo.
+echo  NOTE: Kokoro TTS requires espeak-ng on Windows.
+echo  If you hear no voice, download and install espeak-ng from:
+echo    https://github.com/espeak-ng/espeak-ng/releases
+echo  (get the .msi installer)
+echo.
+
 :: ── Copy .env template ───────────────────────────────────────────────────────
 if not exist ".env" (
     copy ".env.example" ".env" >nul
     echo.
-    echo  IMPORTANT: Edit .env and add your API keys:
+    echo  IMPORTANT: Edit .env and add your API key:
     echo    - ANTHROPIC_API_KEY  (from console.anthropic.com^)
-    echo    - FISH_API_KEY       (from fish.audio^)
     echo.
     notepad .env
 )

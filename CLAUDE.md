@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-JARVIS is a voice-first AI assistant running on Windows 11. It uses Claude as its intelligence, Fish Audio for TTS, and a FastAPI/WebSocket backend with a Three.js frontend. This is a Windows port of the original macOS-only project at https://github.com/ethanplusai/jarvis.
+JARVIS is a voice-first AI assistant running on Windows 11. It uses Claude as its intelligence, Kokoro (local TTS) for voice synthesis, and a FastAPI/WebSocket backend with a Three.js frontend. This is a Windows port of the original macOS-only project at https://github.com/ethanplusai/jarvis.
 
 ## Setup & Run
 
@@ -50,7 +50,7 @@ frontend/src/
 
 ## Key Design Patterns
 
-**Voice pipeline**: Browser mic → Web Speech API → WebSocket → server.py → Claude API → Fish Audio TTS → WebSocket → browser audio playback
+**Voice pipeline**: Browser mic → Web Speech API → WebSocket → server.py → Claude API → Kokoro TTS (local) → WebSocket → browser audio playback
 
 **Action system**: LLM embeds `[ACTION:BUILD]`, `[ACTION:BROWSE]`, etc. tags in responses. `server.py` extracts and executes them after sending the spoken response. Actions include BUILD (spawns Claude Code in Windows Terminal), BROWSE, PROMPT_PROJECT, ADD_TASK, REMEMBER, CREATE_NOTE.
 
@@ -73,13 +73,12 @@ These replace the macOS originals:
 
 ```
 ANTHROPIC_API_KEY   Required
-FISH_API_KEY        Required (for TTS voice)
-FISH_VOICE_ID       Optional (defaults to JARVIS MCU voice)
+KOKORO_VOICE        Optional (TTS voice ID, defaults to am_fenrir)
 USER_NAME           Optional (how JARVIS addresses you, default "sir")
 CALENDAR_ACCOUNTS   Optional (filter Outlook accounts)
 ```
 
 ## Dependencies
 
-Python: fastapi, uvicorn, anthropic, httpx, playwright, pywin32, psutil, mss, Pillow, cryptography
+Python: fastapi, uvicorn, anthropic, httpx, playwright, pywin32, psutil, mss, Pillow, cryptography, kokoro, soundfile, numpy
 Node: vite, typescript, three.js, @vitejs/plugin-basic-ssl
