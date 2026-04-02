@@ -20,7 +20,7 @@ interface StatusResponse {
   uptime_seconds: number;
   env_keys_set: {
     anthropic: boolean;
-    kokoro_voice: string;
+    edge_tts_voice: string;
     user_name: string;
   };
 }
@@ -91,38 +91,33 @@ function buildPanelHTML(): string {
           </div>
 
           <div class="settings-field">
-            <label>Kokoro Voice</label>
+            <label>TTS Voice</label>
             <div class="settings-input-row">
-              <select id="input-kokoro-voice">
-                <optgroup label="American English (Male)">
-                  <option value="am_fenrir">am_fenrir (fenrir)</option>
-                  <option value="am_michael">am_michael (michael)</option>
-                  <option value="am_puck">am_puck (puck)</option>
-                  <option value="am_echo">am_echo (echo)</option>
-                  <option value="am_eric">am_eric (eric)</option>
-                  <option value="am_liam">am_liam (liam)</option>
-                  <option value="am_onyx">am_onyx (onyx)</option>
-                </optgroup>
+              <select id="input-edge-tts-voice">
                 <optgroup label="British English (Male)">
-                  <option value="bm_george">bm_george (george)</option>
-                  <option value="bm_fable">bm_fable (fable)</option>
-                  <option value="bm_daniel">bm_daniel (daniel)</option>
-                  <option value="bm_lewis">bm_lewis (lewis)</option>
+                  <option value="en-GB-RyanNeural">en-GB-RyanNeural (Ryan)</option>
+                  <option value="en-GB-ThomasNeural">en-GB-ThomasNeural (Thomas)</option>
                 </optgroup>
-                <optgroup label="American English (Female)">
-                  <option value="af_heart">af_heart (heart)</option>
-                  <option value="af_bella">af_bella (bella)</option>
-                  <option value="af_nicole">af_nicole (nicole)</option>
-                  <option value="af_sarah">af_sarah (sarah)</option>
+                <optgroup label="American English (Male)">
+                  <option value="en-US-GuyNeural">en-US-GuyNeural (Guy)</option>
+                  <option value="en-US-ChristopherNeural">en-US-ChristopherNeural (Christopher)</option>
+                  <option value="en-US-EricNeural">en-US-EricNeural (Eric)</option>
+                  <option value="en-US-RogerNeural">en-US-RogerNeural (Roger)</option>
+                  <option value="en-US-SteffanNeural">en-US-SteffanNeural (Steffan)</option>
                 </optgroup>
                 <optgroup label="British English (Female)">
-                  <option value="bf_emma">bf_emma (emma)</option>
-                  <option value="bf_isabella">bf_isabella (isabella)</option>
+                  <option value="en-GB-SoniaNeural">en-GB-SoniaNeural (Sonia)</option>
+                  <option value="en-GB-LibbyNeural">en-GB-LibbyNeural (Libby)</option>
+                </optgroup>
+                <optgroup label="American English (Female)">
+                  <option value="en-US-AriaNeural">en-US-AriaNeural (Aria)</option>
+                  <option value="en-US-JennyNeural">en-US-JennyNeural (Jenny)</option>
+                  <option value="en-US-SaraNeural">en-US-SaraNeural (Sara)</option>
                 </optgroup>
               </select>
-              <button class="settings-btn" id="btn-save-kokoro-voice">Save</button>
-              <button class="settings-btn" id="btn-test-kokoro">Test</button>
-              <span class="status-dot" id="status-kokoro"></span>
+              <button class="settings-btn" id="btn-save-tts-voice">Save</button>
+              <button class="settings-btn" id="btn-test-tts">Test</button>
+              <span class="status-dot" id="status-tts"></span>
             </div>
           </div>
 
@@ -235,10 +230,10 @@ async function loadStatus() {
     // API key status dots
     setDotStatus("status-anthropic", status.env_keys_set.anthropic ? "green" : "red");
 
-    // Kokoro voice selector — pre-select current voice
-    const voiceEl = document.getElementById("input-kokoro-voice") as HTMLSelectElement;
-    if (voiceEl && status.env_keys_set.kokoro_voice) {
-      voiceEl.value = status.env_keys_set.kokoro_voice;
+    // TTS voice selector — pre-select current voice
+    const voiceEl = document.getElementById("input-edge-tts-voice") as HTMLSelectElement;
+    if (voiceEl && status.env_keys_set.edge_tts_voice) {
+      voiceEl.value = status.env_keys_set.edge_tts_voice;
     }
 
     // System info
@@ -287,11 +282,11 @@ function wireEvents() {
     await loadStatus();
   });
 
-  // Save Kokoro voice
-  document.getElementById("btn-save-kokoro-voice")?.addEventListener("click", async () => {
-    const voice = (document.getElementById("input-kokoro-voice") as HTMLSelectElement).value;
+  // Save TTS voice
+  document.getElementById("btn-save-tts-voice")?.addEventListener("click", async () => {
+    const voice = (document.getElementById("input-edge-tts-voice") as HTMLSelectElement).value;
     if (voice) {
-      await apiPost("/api/settings/keys", { key_name: "KOKORO_VOICE", key_value: voice });
+      await apiPost("/api/settings/keys", { key_name: "EDGE_TTS_VOICE", key_value: voice });
     }
   });
 
@@ -307,14 +302,14 @@ function wireEvents() {
     }
   });
 
-  // Test Kokoro
-  document.getElementById("btn-test-kokoro")?.addEventListener("click", async () => {
-    setDotStatus("status-kokoro", "yellow");
+  // Test TTS
+  document.getElementById("btn-test-tts")?.addEventListener("click", async () => {
+    setDotStatus("status-tts", "yellow");
     try {
-      const result = await apiPost<{ valid: boolean; error?: string }>("/api/settings/test-kokoro", {});
-      setDotStatus("status-kokoro", result.valid ? "green" : "red");
+      const result = await apiPost<{ valid: boolean; error?: string }>("/api/settings/test-tts", {});
+      setDotStatus("status-tts", result.valid ? "green" : "red");
     } catch {
-      setDotStatus("status-kokoro", "red");
+      setDotStatus("status-tts", "red");
     }
   });
 

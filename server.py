@@ -35,9 +35,8 @@ from typing import Optional
 import io
 
 import anthropic
+import edge_tts
 import httpx
-import numpy as np
-import soundfile as sf
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -65,7 +64,7 @@ log = logging.getLogger("jarvis")
 # ---------------------------------------------------------------------------
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-KOKORO_VOICE = os.getenv("KOKORO_VOICE", "am_fenrir")  # Best male American English voice
+EDGE_TTS_VOICE = os.getenv("EDGE_TTS_VOICE", "en-GB-RyanNeural")
 USER_NAME = os.getenv("USER_NAME", "sir")
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -97,7 +96,7 @@ CONVERSATION STYLE:
 - When you don't know something: "I'm afraid I don't have that information, sir" not "I don't know"
 
 SELF-AWARENESS:
-You ARE the JARVIS project at {project_dir} on {user_name}'s computer. Your code is Python (FastAPI server, WebSocket voice, Kokoro TTS, Anthropic API). You were built by {user_name}. If asked about yourself, your code, how you work, or your line count — use [ACTION:PROMPT_PROJECT] to check the jarvis project. You have full access to your own source code.
+You ARE the JARVIS project at {project_dir} on {user_name}'s computer. Your code is Python (FastAPI server, WebSocket voice, edge-tts, Anthropic API). You were built by {user_name}. If asked about yourself, your code, how you work, or your line count — use [ACTION:PROMPT_PROJECT] to check the jarvis project. You have full access to your own source code.
 
 YOUR CAPABILITIES (these are REAL and ACTIVE — you CAN do all of these RIGHT NOW):
 - You CAN open Windows Terminal via AppleScript
@@ -140,7 +139,7 @@ If the user asks you to do something you genuinely can't do, say "I'm afraid tha
 YOUR INTERFACE:
 The user interacts with you through a web browser showing a particle orb visualization that reacts to your voice. The interface has these controls:
 - **Three-dot menu** (top right): contains Settings, Restart Server, and Fix Yourself options
-- **Settings panel**: Opens from the menu. Users can enter their Anthropic API key, choose a Kokoro TTS voice, set their name and preferences, and see system status (calendar, mail, notes connectivity). Keys are saved to the .env file.
+- **Settings panel**: Opens from the menu. Users can enter their Anthropic API key, choose an edge-tts voice, set their name and preferences, and see system status (calendar, mail, notes connectivity). Keys are saved to the .env file.
 - **Mute button**: Toggles your listening on/off. When muted, you can't hear the user. They click it again to unmute.
 - **Restart Server**: Restarts your backend process. Useful if something seems stuck.
 - **Fix Yourself**: Opens Claude Code in your own project directory so you can debug and fix issues in your own code.
@@ -1045,45 +1044,23 @@ _last_greeting_time: float = 0
 
 
 # ---------------------------------------------------------------------------
-# TTS (Kokoro — local, no API key required)
+# TTS (edge-tts — free Microsoft neural TTS, no API key required)
 # ---------------------------------------------------------------------------
 
-_kokoro_pipeline = None
-
-def _get_kokoro_pipeline():
-    global _kokoro_pipeline
-    if _kokoro_pipeline is None:
-        from kokoro import KPipeline
-        _kokoro_pipeline = KPipeline(lang_code='a')  # American English
-    return _kokoro_pipeline
-
-def _synthesize_sync(text: str) -> Optional[bytes]:
-    """Synchronous Kokoro synthesis — run in executor to avoid blocking."""
-    try:
-        pipeline = _get_kokoro_pipeline()
-        chunks = []
-        for _, _, audio in pipeline(text, voice=KOKORO_VOICE):
-            chunks.append(audio)
-        if not chunks:
-            return None
-        full_audio = np.concatenate(chunks) if len(chunks) > 1 else chunks[0]
-        buf = io.BytesIO()
-        sf.write(buf, full_audio, 24000, format='WAV')
-        buf.seek(0)
-        return buf.read()
-    except Exception as e:
-        log.error(f"TTS error: {e}")
-        return None
-
 async def synthesize_speech(text: str) -> Optional[bytes]:
-    """Generate speech audio from text using Kokoro TTS."""
+    """Generate speech audio from text using edge-tts."""
     try:
-        loop = asyncio.get_event_loop()
-        audio = await loop.run_in_executor(None, _synthesize_sync, text)
+        communicate = edge_tts.Communicate(text, voice=EDGE_TTS_VOICE)
+        buf = io.BytesIO()
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                buf.write(chunk["data"])
+        buf.seek(0)
+        audio = buf.read()
         if audio:
             _session_tokens["tts_calls"] += 1
             _append_usage_entry(0, 0, "tts")
-        return audio
+        return audio or None
     except Exception as e:
         log.error(f"TTS error: {e}")
         return None
@@ -2424,7 +2401,7 @@ class PreferencesUpdate(BaseModel):
 
 @app.post("/api/settings/keys")
 async def api_settings_keys(body: KeyUpdate):
-    allowed = {"ANTHROPIC_API_KEY", "KOKORO_VOICE", "USER_NAME", "HONORIFIC", "CALENDAR_ACCOUNTS"}
+    allowed = {"ANTHROPIC_API_KEY", "EDGE_TTS_VOICE", "USER_NAME", "HONORIFIC", "CALENDAR_ACCOUNTS"}
     if body.key_name not in allowed:
         return JSONResponse({"success": False, "error": "Invalid key name"}, status_code=400)
     _write_env_key(body.key_name, body.key_value)
@@ -2442,12 +2419,11 @@ async def api_test_anthropic(body: KeyTest):
     except Exception as e:
         return {"valid": False, "error": str(e)[:200]}
 
-@app.post("/api/settings/test-kokoro")
-async def api_test_kokoro():
-    """Test Kokoro TTS by generating a short clip."""
+@app.post("/api/settings/test-tts")
+async def api_test_tts():
+    """Test edge-tts by generating a short clip."""
     try:
-        loop = asyncio.get_event_loop()
-        audio = await loop.run_in_executor(None, _synthesize_sync, "Kokoro ready.")
+        audio = await synthesize_speech("Ready.")
         return {"valid": audio is not None}
     except Exception as e:
         return {"valid": False, "error": str(e)[:200]}
@@ -2480,7 +2456,7 @@ async def api_settings_status():
         "uptime_seconds": int(time.time() - _session_start),
         "env_keys_set": {
             "anthropic": bool(env_dict.get("ANTHROPIC_API_KEY", "").strip() and env_dict.get("ANTHROPIC_API_KEY", "") != "your-anthropic-api-key-here"),
-            "kokoro_voice": env_dict.get("KOKORO_VOICE", KOKORO_VOICE),
+            "edge_tts_voice": env_dict.get("EDGE_TTS_VOICE", EDGE_TTS_VOICE),
             "user_name": env_dict.get("USER_NAME", ""),
         },
     }

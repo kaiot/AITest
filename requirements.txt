@@ -19,7 +19,5 @@ psutil>=5.9.0
 mss>=9.0.1
 Pillow>=10.0.0
 
-# Local TTS (Kokoro)
-kokoro>=0.9.4
-soundfile>=0.12.0
-numpy>=1.24.0
+# TTS (edge-tts — free Microsoft neural voices, no API key)
+edge-tts>=6.1.9
