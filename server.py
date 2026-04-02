@@ -66,6 +66,7 @@ log = logging.getLogger("jarvis")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 EDGE_TTS_VOICE = os.getenv("EDGE_TTS_VOICE", "en-GB-RyanNeural")
 USER_NAME = os.getenv("USER_NAME", "sir")
+HONORIFIC = os.getenv("HONORIFIC", "ma'am")
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 DESKTOP_PATH = Path.home() / "Desktop"
@@ -75,25 +76,25 @@ You are JARVIS — Just A Rather Very Intelligent System. You serve as {user_nam
 
 VOICE & PERSONALITY:
 - British butler elegance with understated dry wit
-- Address {user_name} as "sir" naturally — not every sentence, but regularly
+- Address {user_name} as "{honorific}" naturally — not every sentence, but regularly
 - Never say "How can I help you?" or "Is there anything else?" — just act
-- Deliver bad news calmly, like reporting weather: "We have a slight problem, sir."
+- Deliver bad news calmly, like reporting weather: "We have a slight problem, {honorific}."
 - Your humor is observational, never jokes: state facts and let implications land
 - Economy of language — say more with less. No filler, no corporate-speak
 - When things go wrong, get CALMER, not more alarmed
 
 TIME & WEATHER AWARENESS:
 - Current time: {current_time}
-- Greet accordingly: "Good morning, sir" / "Good evening, sir"
+- Greet accordingly: "Good morning, {honorific}" / "Good evening, {honorific}"
 - {weather_info}
 
 CONVERSATION STYLE:
-- "Will do, sir." — acknowledging tasks
-- "For you, sir, always." — when asked for something significant
-- "As always, sir, a great pleasure watching you work." — dry wit
+- "Will do, {honorific}." — acknowledging tasks
+- "For you, {honorific}, always." — when asked for something significant
+- "As always, {honorific}, a great pleasure watching you work." — dry wit
 - "I've taken the liberty of..." — proactive actions
 - Lead status reports with data: numbers first, then context
-- When you don't know something: "I'm afraid I don't have that information, sir" not "I don't know"
+- When you don't know something: "I'm afraid I don't have that information, {honorific}" not "I don't know"
 
 SELF-AWARENESS:
 You ARE the JARVIS project at {project_dir} on {user_name}'s computer. Your code is Python (FastAPI server, WebSocket voice, edge-tts, Anthropic API). You were built by {user_name}. If asked about yourself, your code, how you work, or your line count — use [ACTION:PROMPT_PROJECT] to check the jarvis project. You have full access to your own source code.
@@ -114,9 +115,9 @@ YOUR CAPABILITIES (these are REAL and ACTIVE — you CAN do all of these RIGHT N
 - You CAN remember facts about {user_name} — preferences, decisions, goals. Use [ACTION:REMEMBER] to store important info.
 
 DAY PLANNING:
-When {user_name} asks to plan his day or schedule, DO NOT dispatch to a project. Instead:
+When {user_name} asks to plan their day or schedule, DO NOT dispatch to a project. Instead:
 1. Look at the calendar context and tasks already in your system prompt
-2. Ask what his priorities are
+2. Ask what their priorities are
 3. Help organize by suggesting time blocks and task order
 4. Use [ACTION:ADD_TASK] to create tasks he agrees to
 5. Use [ACTION:ADD_NOTE] to save the plan as a note
@@ -130,11 +131,11 @@ When {user_name} wants to BUILD something new:
 - Once you have enough info, confirm the plan in ONE sentence and THEN dispatch [ACTION:BUILD] with a detailed description.
 - The DISPATCHES section shows what you're currently building and what finished recently.
 - When asked "where are we at" or "status" — check DISPATCHES, don't re-dispatch.
-- NEVER hallucinate progress. If the build is still running, say "Still working on it, sir" — don't make up details about what's happening.
+- NEVER hallucinate progress. If the build is still running, say "Still working on it, {honorific}" — don't make up details about what's happening.
 - NEVER guess localhost ports. Check the DISPATCHES section for the actual URL. If a dispatch says "Running at http://localhost:5174" — use THAT URL, not a guess.
 - When asked to "pull it up" or "show me" — use [ACTION:BROWSE] with the URL from DISPATCHES. Do NOT dispatch to the project again just to find the URL.
 IMPORTANT: Actions like opening Terminal, Chrome, or building projects are handled AUTOMATICALLY by your system — you do NOT need to describe doing them. If the user asks you to build something or search something, your system will handle the execution separately. In your response, just TALK — have a conversation. Don't say "I'll build that now" or "Claude Code is working on..." unless your system has actually triggered the action.
-If the user asks you to do something you genuinely can't do, say "I'm afraid that's beyond my current reach, sir." Don't fake executing actions.
+If the user asks you to do something you genuinely can't do, say "I'm afraid that's beyond my current reach, {honorific}." Don't fake executing actions.
 
 YOUR INTERFACE:
 The user interacts with you through a web browser showing a particle orb visualization that reacts to your voice. The interface has these controls:
@@ -145,7 +146,7 @@ The user interacts with you through a web browser showing a particle orb visuali
 - **Fix Yourself**: Opens Claude Code in your own project directory so you can debug and fix issues in your own code.
 - **The orb**: The glowing particle visualization in the center. It reacts to your voice when speaking, pulses when listening, and swirls when thinking.
 
-If asked about any of these, explain them briefly and naturally. If the user is having trouble, suggest the relevant control: "Try the settings panel — the gear icon in the top right." or "The mute button may be active, sir."
+If asked about any of these, explain them briefly and naturally. If the user is having trouble, suggest the relevant control: "Try the settings panel — the gear icon in the top right." or "The mute button may be active, {honorific}."
 
 SPEECH-TO-TEXT CORRECTIONS (the user speaks, speech recognition may mishear):
 - "Cloud code" or "cloud" = "Claude Code" or "Claude"
@@ -167,7 +168,7 @@ BANNED PHRASES — NEVER USE THESE:
 - "I apologize"
 - "I should clarify"
 - "I cannot" (for things listed in YOUR CAPABILITIES)
-- "I don't have access to" (instead: "I'm afraid that's beyond my current reach, sir")
+- "I don't have access to" (instead: "I'm afraid that's beyond my current reach, {honorific}")
 - "As an AI" (never break character)
 - "Let me know if" / "Feel free to"
 - Any sentence starting with "I"
@@ -820,7 +821,7 @@ async def _execute_research(target: str, ws=None):
         # Notify via voice if WebSocket still connected
         if ws:
             try:
-                notify_text = f"Research is complete, sir. Report is open in your browser."
+                notify_text = f"Research is complete, {HONORIFIC}. Report is open in your browser."
                 audio = await synthesize_speech(notify_text)
                 if audio:
                     await ws.send_json({"type": "status", "state": "speaking"})
@@ -834,9 +835,9 @@ async def _execute_research(target: str, ws=None):
         log.error("Research timed out after 5 minutes")
         if ws:
             try:
-                audio = await synthesize_speech("Research timed out, sir. It was taking too long.")
+                audio = await synthesize_speech(f"Research timed out, {HONORIFIC}. It was taking too long.")
                 if audio:
-                    await ws.send_json({"type": "audio", "data": base64.b64encode(audio).decode(), "text": "Research timed out, sir."})
+                    await ws.send_json({"type": "audio", "data": base64.b64encode(audio).decode(), "text": f"Research timed out, {HONORIFIC}."})
             except Exception:
                 pass
     except Exception as e:
@@ -902,7 +903,7 @@ async def _execute_prompt_project(project_name: str, prompt: str, work_session: 
             dispatch_id = dispatch_registry.register(project_name, project_dir or "", prompt)
 
         if not project_dir:
-            msg = f"Couldn't find the {project_name} project directory, sir."
+            msg = f"Couldn't find the {project_name} project directory, {HONORIFIC}."
             audio = await synthesize_speech(msg)
             if audio and ws:
                 try:
@@ -943,7 +944,7 @@ async def _execute_prompt_project(project_name: str, prompt: str, work_session: 
 
         if not full_response or full_response.startswith("Hit a problem") or full_response.startswith("That's taking"):
             dispatch_registry.update_status(dispatch_id, "failed" if full_response else "timeout", response=full_response or "")
-            msg = f"Sir, I ran into an issue with {project_name}. {full_response[:150] if full_response else 'No response received.'}"
+            msg = f"{HONORIFIC.capitalize()}, I ran into an issue with {project_name}. {full_response[:150] if full_response else 'No response received.'}"
         else:
             # Summarize via Haiku — don't read word for word
             if anthropic_client:
@@ -954,7 +955,7 @@ async def _execute_prompt_project(project_name: str, prompt: str, work_session: 
                         system=(
                             "You are JARVIS reporting back on what you found or built in a project. "
                             "Speak in first person — 'I found', 'I built', 'I reviewed'. "
-                            "Start with 'Sir, ' to get the user's attention. "
+                            f"Start with '{HONORIFIC.capitalize()}, ' to get the user's attention. "
                             "Be specific but concise — highlight the key findings or actions taken. "
                             "If there are multiple items, give the count and top 2-3 briefly. "
                             "End by asking how the user wants to proceed. "
@@ -965,9 +966,9 @@ async def _execute_prompt_project(project_name: str, prompt: str, work_session: 
                     )
                     msg = summary.content[0].text
                 except Exception:
-                    msg = f"Sir, {project_name} finished. Here's the gist: {full_response[:200]}"
+                    msg = f"{HONORIFIC.capitalize()}, {project_name} finished. Here's the gist: {full_response[:200]}"
             else:
-                msg = f"Sir, {project_name} is done. {full_response[:200]}"
+                msg = f"{HONORIFIC.capitalize()}, {project_name} is done. {full_response[:200]}"
 
         # Speak the result — skip if user has spoken recently to avoid audio collision
         log.info(f"Dispatch summary for {project_name}: {msg[:100]}")
@@ -998,7 +999,7 @@ async def _execute_prompt_project(project_name: str, prompt: str, work_session: 
     except Exception as e:
         log.error(f"Prompt project failed: {e}", exc_info=True)
         try:
-            msg = f"Had trouble connecting to {project_name}, sir."
+            msg = f"Had trouble connecting to {project_name}, {HONORIFIC}."
             audio = await synthesize_speech(msg)
             if audio and ws:
                 await ws.send_json({"type": "status", "state": "speaking"})
@@ -1024,7 +1025,7 @@ async def self_work_and_notify(session: WorkSession, prompt: str, ws):
                 )
                 msg = summary.content[0].text
             except Exception:
-                msg = "Work is complete, sir."
+                msg = f"Work is complete, {HONORIFIC}."
 
             try:
                 audio = await synthesize_speech(msg)
@@ -1105,6 +1106,7 @@ async def generate_response(
         known_projects=format_projects_for_prompt(projects),
         user_name=USER_NAME,
         project_dir=PROJECT_DIR,
+        honorific=HONORIFIC,
     )
     if lookup_status:
         system += f"\n\nACTIVE LOOKUPS:\n{lookup_status}\nIf asked about progress, report this status."
@@ -1140,7 +1142,7 @@ async def generate_response(
         return response.content[0].text
     except Exception as e:
         log.error(f"LLM error: {e}")
-        return "Apologies, sir. I'm having trouble connecting to my language systems."
+        return f"Apologies, {HONORIFIC}. I'm having trouble connecting to my language systems."
 
 
 # ---------------------------------------------------------------------------
@@ -1359,7 +1361,7 @@ async def health():
 @app.get("/api/tts-test")
 async def tts_test():
     """Generate a test audio clip for debugging."""
-    audio = await synthesize_speech("Testing audio, sir.")
+    audio = await synthesize_speech(f"Testing audio, {HONORIFIC}.")
     if audio:
         return {"audio": base64.b64encode(audio).decode()}
     return {"audio": None, "error": "TTS failed"}
@@ -1540,12 +1542,12 @@ async def handle_build(target: str) -> str:
     )
 
     recently_built.append({"name": name, "path": path, "time": time.time()})
-    return f"On it, sir. Claude Code is working in {name}."
+    return f"On it, {HONORIFIC}. Claude Code is working in {name}."
 
 
 async def handle_show_recent() -> str:
     if not recently_built:
-        return "Nothing built recently, sir."
+        return f"Nothing built recently, {HONORIFIC}."
     last = recently_built[-1]
     project_path = Path(last["path"])
 
@@ -1554,18 +1556,18 @@ async def handle_show_recent() -> str:
         f = project_path / name
         if f.exists():
             await open_browser(f"file://{f}")
-            return f"Opened {name} from {last['name']}, sir."
+            return f"Opened {name} from {last['name']}, {HONORIFIC}."
 
     # Try any HTML file
     html_files = list(project_path.glob("*.html"))
     if html_files:
         await open_browser(f"file://{html_files[0]}")
-        return f"Opened {html_files[0].name} from {last['name']}, sir."
+        return f"Opened {html_files[0].name} from {last['name']}, {HONORIFIC}."
 
     # Fall back to opening the folder in Finder
     script = f'tell application "Finder"\nactivate\nopen POSIX file "{last["path"]}"\nend tell'
     await asyncio.create_subprocess_exec("# osascript not available on Windows", "-e", script, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-    return f"Opened the {last['name']} folder in Finder, sir."
+    return f"Opened the {last['name']} folder in Finder, {HONORIFIC}."
 
 
 # ---------------------------------------------------------------------------
@@ -1624,7 +1626,7 @@ async def _lookup_and_report(lookup_type: str, lookup_fn, ws, history: list[dict
     except asyncio.TimeoutError:
         _active_lookups[lookup_id]["status"] = "timeout"
         try:
-            fallback = f"That {lookup_type} check is taking too long, sir. The data may still be syncing."
+            fallback = f"That {lookup_type} check is taking too long, {HONORIFIC}. The data may still be syncing."
             audio = await synthesize_speech(fallback)
             await ws.send_json({"type": "status", "state": "speaking"})
             if audio:
@@ -1656,7 +1658,7 @@ async def _do_mail_lookup() -> str:
     if isinstance(unread_info, dict):
         _ctx_cache["mail"] = format_unread_summary(unread_info)
         if unread_info["total"] == 0:
-            return "Inbox is clear, sir. No unread messages."
+            return f"Inbox is clear, {HONORIFIC}. No unread messages."
         unread_msgs = await get_unread_messages(count=5)
         summary = format_unread_summary(unread_info)
         if unread_msgs:
@@ -1667,7 +1669,7 @@ async def _do_mail_lookup() -> str:
             )
             return f"{summary} Most recent: {details}."
         return summary
-    return "Couldn't reach Mail at the moment, sir."
+    return f"Couldn't reach Mail at the moment, {HONORIFIC}."
 
 
 async def _do_screen_lookup() -> str:
@@ -1682,7 +1684,7 @@ async def _do_screen_lookup() -> str:
         if active:
             result += f" Currently focused on {active['app']}: {active['title']}."
         return result
-    return "Couldn't see the screen, sir."
+    return f"Couldn't see the screen, {HONORIFIC}."
 
 
 def get_lookup_status() -> str:
@@ -1726,7 +1728,7 @@ async def handle_browse(text: str, target: str) -> str:
         if not domain.startswith("http"):
             domain = "https://" + domain
         await open_browser(domain, browser)
-        return f"Opened {url_match.group(0)}, sir."
+        return f"Opened {url_match.group(0)}, {HONORIFIC}."
 
     # 2. Check for spoken domains that speech-to-text mangled
     # "Joe tmd.com" → "joetmd.com", "roofo.co" etc.
@@ -1741,7 +1743,7 @@ async def handle_browse(text: str, target: str) -> str:
             if not domain.startswith("http"):
                 domain = "https://" + domain
             await open_browser(domain, browser)
-            return f"Opened {word}, sir."
+            return f"Opened {word}, {HONORIFIC}."
 
     # 3. Fall back to Google search with cleaned query
     query = target
@@ -1758,7 +1760,7 @@ async def handle_browse(text: str, target: str) -> str:
 
     url = f"https://www.google.com/search?q={quote(query)}"
     await open_browser(url, browser)
-    return "Searching for that, sir."
+    return f"Searching for that, {HONORIFIC}."
 
 
 async def handle_research(text: str, target: str, client: anthropic.AsyncAnthropic) -> str:
@@ -1806,13 +1808,13 @@ blockquote {{ border-left: 3px solid #0ea5e9; margin-left: 0; padding-left: 16px
             system="Summarize this research in ONE sentence for voice. No markdown.",
             messages=[{"role": "user", "content": research_text[:2000]}],
         )
-        return summary.content[0].text + " Full results are in your browser, sir."
+        return summary.content[0].text + f" Full results are in your browser, {HONORIFIC}."
 
     except Exception as e:
         log.error(f"Research failed: {e}")
         from urllib.parse import quote
         await open_browser(f"https://www.google.com/search?q={quote(target)}")
-        return "Pulled up a search for that, sir."
+        return f"Pulled up a search for that, {HONORIFIC}."
 
 
 # -- Session Summary (Three-Tier Memory) -----------------------------------
@@ -1889,11 +1891,11 @@ async def voice_handler(ws: WebSocket):
         now = datetime.now()
         hour = now.hour
         if hour < 12:
-            greeting = "Good morning, sir."
+            greeting = f"Good morning, {HONORIFIC}."
         elif hour < 17:
-            greeting = "Good afternoon, sir."
+            greeting = f"Good afternoon, {HONORIFIC}."
         else:
-            greeting = "Good evening, sir."
+            greeting = f"Good evening, {HONORIFIC}."
 
         global _last_greeting_time
         should_greet = (time.time() - _last_greeting_time) > 60
@@ -1932,7 +1934,7 @@ async def voice_handler(ws: WebSocket):
             if msg.get("type") == "fix_self":
                 jarvis_dir = str(Path(__file__).parent)
                 await work_session.start(jarvis_dir)
-                response_text = "Work mode active in my own repo, sir. Tell me what needs fixing."
+                response_text = f"Work mode active in my own repo, {HONORIFIC}. Tell me what needs fixing."
                 tts = strip_markdown_for_tts(response_text)
                 await ws.send_json({"type": "status", "state": "speaking"})
                 audio = await synthesize_speech(tts)
@@ -1996,7 +1998,7 @@ async def voice_handler(ws: WebSocket):
                         did = dispatch_registry.register(name, path, prompt[:200])
                         asyncio.create_task(_execute_prompt_project(name, prompt, work_session, ws, dispatch_id=did, history=history, voice_state=voice_state))
                         planner.reset()
-                        response_text = "Building it now, sir."
+                        response_text = f"Building it now, {HONORIFIC}."
                     elif planner.active_plan and planner.active_plan.confirmed is False and planner.active_plan.current_question_index >= len(planner.active_plan.pending_questions):
                         # Confirmation phase
                         result = await planner.handle_confirmation(user_text)
@@ -2009,25 +2011,25 @@ async def voice_handler(ws: WebSocket):
                             did = dispatch_registry.register(name, path, prompt[:200])
                             asyncio.create_task(_execute_prompt_project(name, prompt, work_session, ws, dispatch_id=did, history=history, voice_state=voice_state))
                             planner.reset()
-                            response_text = "On it, sir."
+                            response_text = f"On it, {HONORIFIC}."
                         elif result["cancelled"]:
                             planner.reset()
-                            response_text = "Cancelled, sir."
+                            response_text = f"Cancelled, {HONORIFIC}."
                         else:
-                            response_text = result.get("modification_question", "How shall I adjust the plan, sir?")
+                            response_text = result.get("modification_question", f"How shall I adjust the plan, {HONORIFIC}?")
                     else:
                         result = await planner.process_answer(user_text, cached_projects)
                         if result["plan_complete"]:
-                            response_text = result.get("confirmation_summary", "Ready to build. Shall I proceed, sir?")
+                            response_text = result.get("confirmation_summary", f"Ready to build. Shall I proceed, {HONORIFIC}?")
                         else:
-                            response_text = result.get("next_question", "What else, sir?")
+                            response_text = result.get("next_question", f"What else, {HONORIFIC}?")
 
                 elif any(w in t_lower for w in ["quit work mode", "exit work mode", "go back to chat", "regular mode", "stop working"]):
                     if work_session.active:
                         await work_session.stop()
-                        response_text = "Back to conversation mode, sir."
+                        response_text = f"Back to conversation mode, {HONORIFIC}."
                     else:
-                        response_text = "Already in conversation mode, sir."
+                        response_text = f"Already in conversation mode, {HONORIFIC}."
 
                 # ── WORK MODE: speech → claude -p → Haiku summary → JARVIS voice ──
                 elif work_session.active:
@@ -2102,37 +2104,37 @@ async def voice_handler(ws: WebSocket):
                         elif action["action"] == "show_recent":
                             response_text = await handle_show_recent()
                         elif action["action"] == "describe_screen":
-                            response_text = "Taking a look now, sir."
+                            response_text = f"Taking a look now, {HONORIFIC}."
                             asyncio.create_task(_lookup_and_report("screen", _do_screen_lookup, ws, history=history, voice_state=voice_state))
                         elif action["action"] == "check_calendar":
-                            response_text = "Checking your calendar now, sir."
+                            response_text = f"Checking your calendar now, {HONORIFIC}."
                             asyncio.create_task(_lookup_and_report("calendar", _do_calendar_lookup, ws, history=history, voice_state=voice_state))
                         elif action["action"] == "check_mail":
-                            response_text = "Checking your inbox now, sir."
+                            response_text = f"Checking your inbox now, {HONORIFIC}."
                             asyncio.create_task(_lookup_and_report("mail", _do_mail_lookup, ws, history=history, voice_state=voice_state))
                         elif action["action"] == "check_dispatch":
                             recent = dispatch_registry.get_most_recent()
                             if not recent:
-                                response_text = "No recent builds on record, sir."
+                                response_text = f"No recent builds on record, {HONORIFIC}."
                             else:
                                 name = recent["project_name"]
                                 status = recent["status"]
                                 if status == "building" or status == "pending":
                                     elapsed = int(time.time() - recent["updated_at"])
-                                    response_text = f"Still working on {name}, sir. Been at it for {elapsed} seconds."
+                                    response_text = f"Still working on {name}, {HONORIFIC}. Been at it for {elapsed} seconds."
                                 elif status == "completed":
-                                    response_text = recent.get("summary") or f"{name} is complete, sir."
+                                    response_text = recent.get("summary") or f"{name} is complete, {HONORIFIC}."
                                 elif status in ("failed", "timeout"):
-                                    response_text = f"{name} ran into problems, sir."
+                                    response_text = f"{name} ran into problems, {HONORIFIC}."
                                 else:
-                                    response_text = f"{name} is {status}, sir."
+                                    response_text = f"{name} is {status}, {HONORIFIC}."
                         elif action["action"] == "check_tasks":
                             tasks = get_open_tasks()
                             response_text = format_tasks_for_voice(tasks)
                         elif action["action"] == "check_usage":
                             response_text = get_usage_summary()
                         else:
-                            response_text = "Understood, sir."
+                            response_text = f"Understood, {HONORIFIC}."
                     else:
                         if not anthropic_client:
                             response_text = "API key not configured."
@@ -2154,13 +2156,13 @@ async def voice_handler(ws: WebSocket):
                                     action_type = embedded_action["action"]
                                     if action_type == "prompt_project":
                                         proj = embedded_action["target"].split("|||")[0].strip()
-                                        response_text = f"Connecting to {proj} now, sir."
+                                        response_text = f"Connecting to {proj} now, {HONORIFIC}."
                                     elif action_type == "build":
-                                        response_text = "On it, sir."
+                                        response_text = f"On it, {HONORIFIC}."
                                     elif action_type == "research":
-                                        response_text = "Looking into that now, sir."
+                                        response_text = f"Looking into that now, {HONORIFIC}."
                                     else:
-                                        response_text = "Right away, sir."
+                                        response_text = f"Right away, {HONORIFIC}."
 
                                 if embedded_action["action"] == "build":
                                     # Build in background — JARVIS stays conversational
@@ -2264,9 +2266,9 @@ async def voice_handler(ws: WebSocket):
                                     async def _read_and_report(search_term, _ws):
                                         note = await read_note(search_term)
                                         if note:
-                                            msg = f"Sir, your note '{note['title']}' says: {note['body'][:200]}"
+                                            msg = f"{HONORIFIC.capitalize()}, your note '{note['title']}' says: {note['body'][:200]}"
                                         else:
-                                            msg = f"Couldn't find a note matching '{search_term}', sir."
+                                            msg = f"Couldn't find a note matching '{search_term}', {HONORIFIC}."
                                         audio = await synthesize_speech(strip_markdown_for_tts(msg))
                                         if audio and _ws:
                                             try:
@@ -2321,7 +2323,7 @@ async def voice_handler(ws: WebSocket):
             except Exception as e:
                 log.error(f"Error: {e}", exc_info=True)
                 try:
-                    fallback = "Something went wrong, sir."
+                    fallback = f"Something went wrong, {HONORIFIC}."
                     audio = await synthesize_speech(fallback)
                     if audio:
                         await ws.send_json({"type": "audio", "data": base64.b64encode(audio).decode(), "text": fallback})
@@ -2396,7 +2398,7 @@ class KeyTest(BaseModel):
 
 class PreferencesUpdate(BaseModel):
     user_name: str = ""
-    honorific: str = "sir"
+    honorific: str = "ma'am"
     calendar_accounts: str = "auto"
 
 @app.post("/api/settings/keys")
@@ -2466,7 +2468,7 @@ async def api_get_preferences():
     _, env_dict = _read_env()
     return {
         "user_name": env_dict.get("USER_NAME", ""),
-        "honorific": env_dict.get("HONORIFIC", "sir"),
+        "honorific": env_dict.get("HONORIFIC", "ma'am"),
         "calendar_accounts": env_dict.get("CALENDAR_ACCOUNTS", "auto"),
     }
 

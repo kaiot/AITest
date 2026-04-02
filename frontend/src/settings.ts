@@ -261,7 +261,7 @@ async function loadPreferences() {
     const honEl = document.getElementById("input-honorific") as HTMLSelectElement;
     const calEl = document.getElementById("input-calendar-accounts") as HTMLTextAreaElement;
     if (nameEl) nameEl.value = prefs.user_name || "";
-    if (honEl) honEl.value = prefs.honorific || "sir";
+    if (honEl) honEl.value = prefs.honorific || "ma'am";
     if (calEl) calEl.value = prefs.calendar_accounts || "auto";
   } catch (e) {
     console.error("[settings] failed to load preferences:", e);
