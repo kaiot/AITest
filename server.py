@@ -2025,14 +2025,14 @@ async def voice_handler(ws: WebSocket):
                             response_text = result.get("next_question", f"What else, {HONORIFIC}?")
 
                 elif any(w in t_lower for w in ["quit work mode", "exit work mode", "go back to chat", "regular mode", "stop working"]):
-                    if work_session.active:
+                    if work_session.is_active:
                         await work_session.stop()
                         response_text = f"Back to conversation mode, {HONORIFIC}."
                     else:
                         response_text = f"Already in conversation mode, {HONORIFIC}."
 
                 # ── WORK MODE: speech → claude -p → Haiku summary → JARVIS voice ──
-                elif work_session.active:
+                elif work_session.is_active:
                     if is_casual_question(user_text):
                         # Quick chat — bypass claude -p, use Haiku
                         response_text = await generate_response(
