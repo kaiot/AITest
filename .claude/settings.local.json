@@ -5,7 +5,8 @@
       "WebFetch(domain:api.github.com)",
       "Bash(curl:*)",
       "WebFetch(domain:github.com)",
-      "Bash(npx ai-codex:*)"
+      "Bash(npx ai-codex:*)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('screen.py'\\).read\\(\\)\\); print\\('screen.py syntax OK'\\)\")"
     ]
   }
 }
