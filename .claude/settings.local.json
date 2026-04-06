@@ -6,7 +6,11 @@
       "Bash(curl:*)",
       "WebFetch(domain:github.com)",
       "Bash(npx ai-codex:*)",
-      "Bash(python -c \"import ast; ast.parse\\(open\\('screen.py'\\).read\\(\\)\\); print\\('screen.py syntax OK'\\)\")"
+      "Bash(python -c \"import ast; ast.parse\\(open\\('screen.py'\\).read\\(\\)\\); print\\('screen.py syntax OK'\\)\")",
+      "Bash(ollama pull:*)",
+      "Bash(where ollama:*)",
+      "Read(//c/Users/Kai/AppData/Local/Programs/Ollama/**)",
+      "Bash(/c/Users/Kai/AppData/Local/Programs/Ollama/ollama.exe pull:*)"
     ]
   }
 }
